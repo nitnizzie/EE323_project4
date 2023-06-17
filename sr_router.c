@@ -579,7 +579,7 @@ void sr_handlepacket(struct sr_instance *sr,
 					for (en_pck = arpreq->packets; en_pck != NULL; en_pck = en_pck->next)
 					{
 						/* set ethernet header */
-						e_hdr = (struct sr_ethernet_hdr *)packet->buf;
+						e_hdr = (struct sr_ethernet_hdr *)en_pck->buf;
 
 						/* set dst MAC addr */
 						memcpy(e_hdr->ether_shost, a_hdr0->ar_tha, ETHER_ADDR_LEN);
