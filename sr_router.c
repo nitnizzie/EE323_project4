@@ -328,41 +328,110 @@ void sr_handlepacket(struct sr_instance *sr,
 			{
 				/**************** fill in code here *****************/
 				/* check TTL expiration */
-				/* if TTL expired, { */
-				/* validation */
-
-				/* generate ICMP time exceeded packet */
-
-				/* send */
-
-				/* queue */
-
-				/* done */
-
-				/* } */
-				/* TTL not expired */
-				/* set src MAC addr */
-
-				/* refer ARP table */
-
-				/* hit */
-				if (arpentry != NULL)
+				if (i_hdr0->ip_ttl <= 1)
 				{
-					/* set dst MAC addr */
+					/* validation */
+					if (len_r + sizeof(struct sr_ip_hdr) < ICMP_DATA_SIZE)
+						return;
 
-					/* decrement TTL  */
+					/* generate ICMP time exceeded packet */
+					new_len = sizeof(struct sr_ethernet_hdr) +
+							  sizeof(struct sr_ip_hdr) +
+							  sizeof(struct sr_icmp_t11_hdr);
+					new_pck = (uint8_t *)calloc(1, new_len);
 
-					/* forward */
+					/* set ethernet header */
+					e_hdr = (struct sr_ethernet_hdr *)new_pck;
+					e_hdr->ether_type = htons(ethertype_ip);
+
+					/* set ip header */
+					i_hdr = (struct sr_ip_hdr *)(new_pck + sizeof(struct sr_ethernet_hdr));
+					i_hdr->ip_v = 0x4;
+					i_hdr->ip_hl = 0x5;
+					i_hdr->ip_tos = 0x0;
+					i_hdr->ip_len = htons(sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_t11_hdr));
+					i_hdr->ip_id = htons(0);
+					i_hdr->ip_off = htons(IP_DF);
+					i_hdr->ip_ttl = INIT_TTL;
+					i_hdr->ip_p = ip_protocol_icmp;
+					i_hdr->ip_sum = 0;
+
+					ifc = sr_get_interface(sr, interface);
+					i_hdr->ip_src = ifc->ip;
+					i_hdr->ip_dst = i_hdr0->ip_src;
+					i_hdr->ip_sum = cksum(i_hdr, sizeof(struct sr_ip_hdr));
+
+					/* set icmp header */
+					ict11_hdr = (struct sr_icmp_t11_hdr *)(new_pck + sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_ip_hdr));
+					ict11_hdr->icmp_type = 0x0b; /* time exceeded */
+					ict11_hdr->icmp_code = 0x00;
+					ict11_hdr->icmp_sum = 0;
+					ict11_hdr->unused = 0;
+					memcpy(ict11_hdr->data, i_hdr0, ICMP_DATA_SIZE);
+					ict11_hdr->icmp_sum = cksum(ict11_hdr, sizeof(struct sr_icmp_t11_hdr));
+
+					rtentry = sr_findLPMentry(sr->routing_table, i_hdr->ip_dst);
+					if (rtentry != NULL)
+					{
+						ifc = sr_get_interface(sr, rtentry->interface);
+						memcpy(e_hdr->ether_shost, ifc->addr, ETHER_ADDR_LEN);
+						arpentry = sr_arpcache_lookup(&(sr->cache), rtentry->gw.s_addr);
+						if (arpentry != NULL)
+						{
+							memcpy(e_hdr->ether_dhost, arpentry->mac, ETHER_ADDR_LEN);
+							free(arpentry);
+							/* send */
+							sr_send_packet(sr, new_pck, new_len, rtentry->interface);
+						}
+						else
+						{
+							/* queue */
+							arpreq = sr_arpcache_queuereq(&(sr->cache), rtentry->gw.s_addr, new_pck, new_len, rtentry->interface);
+							sr_arpcache_handle_arpreq(sr, arpreq);
+						}
+					}
+
+					/* done */
+					free(new_pck);
+					return;
 				}
-				/* ARP table miss */
+				/* TTL not expired */
 				else
 				{
-					/* queue */
-					arpreq = sr_arpcache_queuereq(&(sr->cache), rtentry->gw.s_addr, packet, len, rtentry->interface);
-					sr_arpcache_handle_arpreq(sr, arpreq);
+					/* set src MAC addr */
+					ifc = sr_get_interface(sr, rtentry->interface);
+					memcpy(e_hdr0->ether_shost, ifc->addr, ETHER_ADDR_LEN);
+
+					/* refer ARP table */
+					arpentry = sr_arpcache_lookup(&(sr->cache), rtentry->gw.s_addr);
+
+					/* hit */
+					if (arpentry != NULL)
+					{
+						/* set dst MAC addr */
+						memcpy(e_hdr0->ether_dhost, arpentry->mac, ETHER_ADDR_LEN);
+						free(arpentry);
+
+						/* decrement TTL */
+						i_hdr0->ip_ttl--;
+
+						/* recompute checksum */
+						i_hdr0->ip_sum = 0;
+						i_hdr0->ip_sum = cksum(i_hdr0, sizeof(struct sr_ip_hdr));
+
+						/* forward */
+						sr_send_packet(sr, packet, len, rtentry->interface);
+					}
+					/* ARP table miss */
+					else
+					{
+						/* queue */
+						arpreq = sr_arpcache_queuereq(&(sr->cache), rtentry->gw.s_addr, packet, len, rtentry->interface);
+						sr_arpcache_handle_arpreq(sr, arpreq);
+					}
+					/* done */
+					return;
 				}
-				/* done */
-				return;
 				/*****************************************************/
 			}
 			/* routing table miss */
