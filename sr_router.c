@@ -70,6 +70,9 @@ int ip_black_list(struct sr_ip_hdr *iph)
 	uint32_t blacklist = inet_addr(ip_blacklist);
 	uint32_t mask_addr = inet_addr(mask);
 
+	print_addr_ip_int(src);
+	print_addr_ip_int(blacklist);
+	print_addr_ip_int(mask_addr);
 	if ((src & mask_addr) == blacklist)
 	{
 		printf("[IP blocked] : ");
