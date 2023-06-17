@@ -545,7 +545,7 @@ void sr_handlepacket(struct sr_instance *sr,
 				a_hdr->ar_tip = a_hdr0->ar_sip;
 				memcpy(a_hdr->ar_tha, a_hdr0->ar_sha, ETHER_ADDR_LEN);
 
-				rtentry = sr_get_interface(sr->routing_table, a_hdr->ar_tip);
+				rtentry = sr_findLPMentry(sr->routing_table, a_hdr->ar_tip);
 				if (rtentry != NULL)
 				{
 					ifc = sr_get_interface(sr, rtentry->interface);
@@ -576,7 +576,7 @@ void sr_handlepacket(struct sr_instance *sr,
 				if (arpreq != NULL)
 				{
 					/* send all packets on the req->packets linked list */
-					for (packet = arpreq->packets; packet != NULL; packet = packet->next)
+					for (en_pck = arpreq->packets; en_pck != NULL; en_pck = en_pck->next)
 					{
 						/* set ethernet header */
 						e_hdr = (struct sr_ethernet_hdr *)packet->buf;
@@ -586,7 +586,7 @@ void sr_handlepacket(struct sr_instance *sr,
 						memcpy(e_hdr->ether_dhost, a_hdr0->ar_sha, ETHER_ADDR_LEN);
 
 						/* set IP header */
-						i_hdr = (struct sr_ip_hdr *)(packet->buf + sizeof(struct sr_ethernet_hdr));
+						i_hdr = (struct sr_ip_hdr *)(en_pck->buf + sizeof(struct sr_ethernet_hdr));
 
 						/* decrement TTL except for self-generated packets */
 						for (ifc = sr->if_list; ifc != NULL; ifc = ifc->next)
@@ -603,7 +603,7 @@ void sr_handlepacket(struct sr_instance *sr,
 						i_hdr->ip_sum = cksum(i_hdr, sizeof(struct sr_ip_hdr));
 
 						/* send */
-						sr_send_packet(sr, packet->buf, packet->len, packet->iface);
+						sr_send_packet(sr, en_pck->buf, en_pck->len, en_pck->iface);
 					}
 
 					/* done */
