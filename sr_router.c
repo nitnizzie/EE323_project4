@@ -66,7 +66,7 @@ int ip_black_list(struct sr_ip_hdr *iph)
 	char mask[20] = "255.255.255.0";	/* DO NOT MODIFY */
 	/**************** fill in code here *****************/
 
-	uint32_t src = (iph->ip_src);
+	uint32_t src = ntohl(iph->ip_src);
 	uint32_t blacklist = inet_addr(ip_blacklist);
 	uint32_t mask_addr = inet_addr(mask);
 
