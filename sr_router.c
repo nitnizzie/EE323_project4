@@ -73,7 +73,7 @@ int ip_black_list(struct sr_ip_hdr *iph)
 	if ((src & mask_addr) == blacklist)
 	{
 		printf("[IP blocked] : ");
-		print_addr_ip(src);
+		print_addr_ip_int(src);
 		return 1;
 	}
 
@@ -374,7 +374,7 @@ void sr_handlepacket(struct sr_instance *sr,
 
 				/*****************************************************/
 				/* no exist */
-				else return;
+				// else return;
 			}
 
 			/* other codes */
