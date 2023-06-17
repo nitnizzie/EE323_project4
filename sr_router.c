@@ -70,8 +70,6 @@ int ip_black_list(struct sr_ip_hdr *iph)
 	uint32_t blacklist = ntohl(inet_addr(ip_blacklist));
 	uint32_t mask_addr = ntohl(inet_addr(mask));
 
-	// fprintf(stderr, "0x%08x\n", src & mask_addr);
-	// fprintf(stderr, "0x%08x\n", blacklist);
 	if ((src & mask_addr) == blacklist)
 	{
 		fprintf(stderr, "[IP blocked] : ");
