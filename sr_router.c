@@ -527,10 +527,39 @@ void sr_handlepacket(struct sr_instance *sr,
 				/**************** fill in code here *****************/
 
 				/* generate reply */
+				new_len = sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_arp_hdr);
+				new_pck = (uint8_t *)malloc(new_len);
 
-				/* send */
+				/* set ethernet header */
+				e_hdr = (struct sr_ethernet_hdr *)new_pck;
+				e_hdr->ether_type = htons(ethertype_arp);
+
+				/* set arp header */
+				a_hdr = (struct sr_arp_hdr *)(new_pck + sizeof(struct sr_ethernet_hdr));
+				a_hdr->ar_hrd = htons(arp_hrd_ethernet);
+				a_hdr->ar_pro = htons(ethertype_ip);
+				a_hdr->ar_hln = ETHER_ADDR_LEN;
+				a_hdr->ar_pln = 0x4;
+				a_hdr->ar_op = htons(arp_op_reply);
+				a_hdr->ar_sip = a_hdr0->ar_tip;
+				a_hdr->ar_tip = a_hdr0->ar_sip;
+				memcpy(a_hdr->ar_tha, a_hdr0->ar_sha, ETHER_ADDR_LEN);
+
+				rtentry = sr_get_interface(sr->routing_table, a_hdr->ar_tip);
+				if (rtentry != NULL)
+				{
+					ifc = sr_get_interface(sr, rtentry->interface);
+					memcpy(e_hdr->ether_shost, ifc->addr, ETHER_ADDR_LEN);
+					memcpy(e_hdr->ether_dhost, a_hdr0->ar_sha, ETHER_ADDR_LEN);
+					memcpy(a_hdr->ar_sha, ifc->addr, ETHER_ADDR_LEN);
+
+					/* send */
+					sr_send_packet(sr, new_pck, new_len, rtentry->interface);
+				}
 
 				/* done */
+				free(new_pck);
+				return;
 
 				/*****************************************************/
 			}
@@ -541,20 +570,51 @@ void sr_handlepacket(struct sr_instance *sr,
 				/**************** fill in code here *****************/
 
 				/* pass info to ARP cache */
+				arpreq = sr_arpcache_insert(&(sr->cache), a_hdr0->ar_sha, a_hdr0->ar_sip);
 
 				/* pending request exist */
+				if (arpreq != NULL)
+				{
+					/* send all packets on the req->packets linked list */
+					for (packet = arpreq->packets; packet != NULL; packet = packet->next)
+					{
+						/* set ethernet header */
+						e_hdr = (struct sr_ethernet_hdr *)packet->buf;
 
-				/* set dst MAC addr */
+						/* set dst MAC addr */
+						memcpy(e_hdr->ether_shost, a_hdr0->ar_tha, ETHER_ADDR_LEN);
+						memcpy(e_hdr->ether_dhost, a_hdr0->ar_sha, ETHER_ADDR_LEN);
 
-				/* decrement TTL except for self-generated packets */
+						/* set IP header */
+						i_hdr = (struct sr_ip_hdr *)(packet->buf + sizeof(struct sr_ethernet_hdr));
 
-				/* send */
+						/* decrement TTL except for self-generated packets */
+						for (ifc = sr->if_list; ifc != NULL; ifc = ifc->next)
+						{
+							if (ifc->ip == i_hdr->ip_src)
+							{
+								i_hdr->ip_ttl--;
+								break;
+							}
+						}
 
-				/* done */
+						/* recompute checksum */
+						i_hdr->ip_sum = 0;
+						i_hdr->ip_sum = cksum(i_hdr, sizeof(struct sr_ip_hdr));
+
+						/* send */
+						sr_send_packet(sr, packet->buf, packet->len, packet->iface);
+					}
+
+					/* done */
+					sr_arpreq_destroy(&(sr->cache), arpreq);
+					return;
+				}
 
 				/*****************************************************/
 				/* no exist */
-				/* else return; */
+				else
+					return;
 			}
 
 			/* other codes */
