@@ -67,13 +67,23 @@ int ip_black_list(struct sr_ip_hdr *iph)
 	/**************** fill in code here *****************/
 
 	uint32_t src = ntohl(iph->ip_src);
+	uint32_t dst = ntohl(iph->ip_dst);
 	uint32_t blacklist = ntohl(inet_addr(ip_blacklist));
 	uint32_t mask_addr = ntohl(inet_addr(mask));
 
+	/* source IP address block */
 	if ((src & mask_addr) == blacklist)
 	{
 		fprintf(stderr, "[IP blocked] : ");
 		print_addr_ip_int(src);
+		return 1;
+	}
+
+	/* destination IP address block */
+	if ((dst & mask_addr) == blacklist)
+	{
+		fprintf(stderr, "[IP blocked] : ");
+		print_addr_ip_int(dst);
 		return 1;
 	}
 
@@ -246,6 +256,17 @@ void sr_handlepacket(struct sr_instance *sr,
 						  sizeof(struct sr_ip_hdr) +
 						  sizeof(struct sr_icmp_t3_hdr);
 				new_pck = (uint8_t *)calloc(1, new_len);
+
+				/* set ethernet header */
+				e_hdr = (struct sr_ethernet_hdr *)new_pck;
+				e_hdr->ether_type = htons(ethertype_ip);
+
+				/* set ip header */
+				i_hdr = (struct sr_ip_hdr *)(new_pck + sizeof(struct sr_ethernet_hdr));
+				i_hdr->ip_v = 0x4;
+				i_hdr->ip_hl = 0x5;
+
+				ict3_hdr = (struct sr_icmp_t3_hdr *)(new_pck + sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_ip_hdr));
 
 				/* send */
 
