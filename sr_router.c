@@ -292,7 +292,7 @@ void sr_handlepacket(struct sr_instance *sr,
 				{
 					ifc = sr_get_interface(sr, rtentry->interface);
 					memcpy(e_hdr->ether_shost, ifc->addr, ETHER_ADDR_LEN);
-					arpentry = sr_arpcache_lookup(&(sr->cache), i_hdr->ip_dst);
+					arpentry = sr_arpcache_lookup(&(sr->cache), rtentry->gw.s_addr);
 					if (arpentry != NULL)
 					{
 						memcpy(e_hdr->ether_dhost, arpentry->mac, ETHER_ADDR_LEN);
@@ -303,7 +303,7 @@ void sr_handlepacket(struct sr_instance *sr,
 					else
 					{
 						/* queue */
-						arpreq = sr_arpcache_queuereq(&(sr->cache), i_hdr->ip_dst, new_pck, new_len, rtentry->interface);
+						arpreq = sr_arpcache_queuereq(&(sr->cache), rtentry->gw.s_addr, new_pck, new_len, rtentry->interface);
 						sr_arpcache_handle_arpreq(sr, arpreq);
 					}
 				}
