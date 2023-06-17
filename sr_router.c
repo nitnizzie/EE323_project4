@@ -374,7 +374,7 @@ void sr_handlepacket(struct sr_instance *sr,
 
 				/*****************************************************/
 				/* no exist */
-				// else return;
+				/* else return; */
 			}
 
 			/* other codes */
