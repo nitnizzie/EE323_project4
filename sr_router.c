@@ -261,16 +261,52 @@ void sr_handlepacket(struct sr_instance *sr,
 				e_hdr = (struct sr_ethernet_hdr *)new_pck;
 				e_hdr->ether_type = htons(ethertype_ip);
 
+				printf("%d\n", sizeof(struct sr_ip_hdr));
 				/* set ip header */
 				i_hdr = (struct sr_ip_hdr *)(new_pck + sizeof(struct sr_ethernet_hdr));
 				i_hdr->ip_v = 0x4;
 				i_hdr->ip_hl = 0x5;
+				i_hdr->ip_tos = 0x0;
+				i_hdr->ip_len = htons(sizeof(struct sr_ip_hdr) + sizeof(struct sr_icmp_t3_hdr));
+				i_hdr->ip_id = htons(0);
+				i_hdr->ip_off = htons(IP_DF);
+				i_hdr->ip_ttl = INIT_TTL;
+				i_hdr->ip_p = ip_protocol_icmp;
+				i_hdr->ip_sum = 0;
+				i_hdr->ip_src = i_hdr0->ip_dst;
+				i_hdr->ip_dst = i_hdr0->ip_src;
+				i_hdr->ip_sum = cksum(i_hdr, sizeof(struct sr_ip_hdr));
 
+				/* set icmp header */
 				ict3_hdr = (struct sr_icmp_t3_hdr *)(new_pck + sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_ip_hdr));
+				ict3_hdr->icmp_type = 0x03; /* port unreachable */
+				ict3_hdr->icmp_code = 0x03;
+				ict3_hdr->icmp_sum = 0;
+				ict3_hdr->unused = 0;
+				ict3_hdr->next_mtu = 0;
+				memcpy(ict3_hdr->data, i_hdr0, ICMP_DATA_SIZE);
+				ict3_hdr->icmp_sum = cksum(ict3_hdr, sizeof(struct sr_icmp_t3_hdr));
 
-				/* send */
-
-				/* queue */
+				rtentry = sr_findLPMentry(sr->routing_table, i_hdr->ip_dst);
+				if (rtentry != NULL)
+				{
+					ifc = sr_get_interface(sr, rtentry->interface);
+					memcpy(e_hdr->ether_shost, ifc->addr, ETHER_ADDR_LEN);
+					arpentry = sr_arpcache_lookup(&(sr->cache), i_hdr->ip_dst);
+					if (arpentry != NULL)
+					{
+						memcpy(e_hdr->ether_dhost, arpentry->mac, ETHER_ADDR_LEN);
+						free(arpentry);
+						/* send */
+						sr_send_packet(sr, new_pck, new_len, rtentry->interface);
+					}
+					else
+					{
+						/* queue */
+						arpreq = sr_arpcache_queuereq(&(sr->cache), i_hdr->ip_dst, new_pck, new_len, rtentry->interface);
+						sr_arpcache_handle_arpreq(sr, arpreq);
+					}
+				}
 
 				/* done */
 				free(new_pck);
