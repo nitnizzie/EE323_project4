@@ -283,7 +283,6 @@ void sr_handlepacket(struct sr_instance *sr,
 				ict3_hdr->icmp_code = 0x03; /* port unreachable */
 				ict3_hdr->icmp_sum = 0;
 				ict3_hdr->unused = 0;
-				ict3_hdr->next_mtu = 0;
 				memcpy(ict3_hdr->data, i_hdr0, ICMP_DATA_SIZE);
 				ict3_hdr->icmp_sum = cksum(ict3_hdr, sizeof(struct sr_icmp_t3_hdr));
 
@@ -474,7 +473,6 @@ void sr_handlepacket(struct sr_instance *sr,
 				ict3_hdr->icmp_code = 0x00; /* net unreachable */
 				ict3_hdr->icmp_sum = 0;
 				ict3_hdr->unused = 0;
-				ict3_hdr->next_mtu = 0;
 				memcpy(ict3_hdr->data, i_hdr0, ICMP_DATA_SIZE);
 				ict3_hdr->icmp_sum = cksum(ict3_hdr, sizeof(struct sr_icmp_t3_hdr));
 
