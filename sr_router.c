@@ -73,11 +73,11 @@ int ip_black_list(struct sr_ip_hdr *iph)
 	print_addr_ip_int(src);
 	print_addr_ip_int(blacklist);
 	print_addr_ip_int(mask_addr);
-	printf("0x%08x\n", src & mask_addr);
-	printf("0x%08x\n", blacklist);
+	fprintf(stderr, "0x%08x\n", src & mask_addr);
+	fprintf(stderr, "0x%08x\n", blacklist);
 	if ((src & mask_addr) == blacklist)
 	{
-		printf("[IP blocked] : ");
+		fprintf(stderr, "[IP blocked] : ");
 		print_addr_ip_int(src);
 		return 1;
 	}
