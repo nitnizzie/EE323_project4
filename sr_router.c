@@ -24,12 +24,12 @@
 #include "sr_utils.h"
 
 /*---------------------------------------------------------------------
-* Method: sr_init(void)
-* Scope:  Global
-*
-* Initialize the routing subsystem
-*
-*---------------------------------------------------------------------*/
+ * Method: sr_init(void)
+ * Scope:  Global
+ *
+ * Initialize the routing subsystem
+ *
+ *---------------------------------------------------------------------*/
 void sr_init(struct sr_instance *sr)
 {
 	/* REQUIRES */
@@ -51,41 +51,51 @@ void sr_init(struct sr_instance *sr)
 } /* -- sr_init -- */
 
 /*---------------------------------------------------------------------
-* Method: ip_black_list(struct sr_ip_hdr *iph)
-* Scope:  Local
-*
-* This method is called each time the sr_handlepacket() is called.
-* Block IP addresses in the blacklist and print the log.
-* - Format : "[IP blocked] : <IP address>"
-* - e.g.) [IP blocked] : 10.0.2.100
-*
-*---------------------------------------------------------------------*/
+ * Method: ip_black_list(struct sr_ip_hdr *iph)
+ * Scope:  Local
+ *
+ * This method is called each time the sr_handlepacket() is called.
+ * Block IP addresses in the blacklist and print the log.
+ * - Format : "[IP blocked] : <IP address>"
+ * - e.g.) [IP blocked] : 10.0.2.100
+ *
+ *---------------------------------------------------------------------*/
 int ip_black_list(struct sr_ip_hdr *iph)
 {
 	char ip_blacklist[20] = "10.0.2.0"; /* DO NOT MODIFY */
-	char mask[20] = "255.255.255.0"; /* DO NOT MODIFY */
+	char mask[20] = "255.255.255.0";	/* DO NOT MODIFY */
 	/**************** fill in code here *****************/
 
+	uint32_t src = ntohl(iph->ip_src);
+	uint32_t blacklist = inet_addr(ip_blacklist);
+	uint32_t mask_addr = inet_addr(mask);
 
+	if ((src & mask_addr) == blacklist)
+	{
+		printf("[IP blocked] : ");
+		print_addr_ip(src);
+		return 1;
+	}
 
+	return 0;
 
 	/****************************************************/
 }
 /*---------------------------------------------------------------------
-* Method: sr_handlepacket(uint8_t* p,char* interface)
-* Scope:  Global
-*
-* This method is called each time the router receives a packet on the
-* interface.  The packet buffer, the packet length and the receiving
-* interface are passed in as parameters. The packet is complete with
-* ethernet headers.
-*
-* Note: Both the packet buffer and the character's memory are handled
-* by sr_vns_comm.c that means do NOT delete either.  Make a copy of the
-* packet instead if you intend to keep it around beyond the scope of
-* the method call.
-*
-*---------------------------------------------------------------------*/
+ * Method: sr_handlepacket(uint8_t* p,char* interface)
+ * Scope:  Global
+ *
+ * This method is called each time the router receives a packet on the
+ * interface.  The packet buffer, the packet length and the receiving
+ * interface are passed in as parameters. The packet is complete with
+ * ethernet headers.
+ *
+ * Note: Both the packet buffer and the character's memory are handled
+ * by sr_vns_comm.c that means do NOT delete either.  Make a copy of the
+ * packet instead if you intend to keep it around beyond the scope of
+ * the method call.
+ *
+ *---------------------------------------------------------------------*/
 void sr_handlepacket(struct sr_instance *sr,
 					 uint8_t *packet /* lent */,
 					 unsigned int len,
@@ -97,10 +107,10 @@ void sr_handlepacket(struct sr_instance *sr,
 	assert(packet);
 	assert(interface);
 
-    /*
-        We provide local variables used in the reference solution.
-        You can add or ignore local variables.
-    */
+	/*
+		We provide local variables used in the reference solution.
+		You can add or ignore local variables.
+	*/
 	uint8_t *new_pck;	  /* new packet */
 	unsigned int new_len; /* length of new_pck */
 
@@ -230,25 +240,21 @@ void sr_handlepacket(struct sr_instance *sr,
 				if (len_r + sizeof(struct sr_ip_hdr) < ICMP_DATA_SIZE)
 					return;
 
-			/**************** fill in code here ******************/
+				/**************** fill in code here ******************/
 				/* generate ICMP port unreachable packet */
-				new_len = sizeof(struct sr_ethernet_hdr) + 
-					  sizeof(struct sr_ip_hdr) + 
-					  sizeof(struct sr_icmp_t3_hdr);
+				new_len = sizeof(struct sr_ethernet_hdr) +
+						  sizeof(struct sr_ip_hdr) +
+						  sizeof(struct sr_icmp_t3_hdr);
 				new_pck = (uint8_t *)calloc(1, new_len);
 
 				/* send */
 
-
-
 				/* queue */
-
-
 
 				/* done */
 				free(new_pck);
 				return;
-			/*****************************************************/
+				/*****************************************************/
 			}
 			/* with others */
 			else
@@ -263,89 +269,61 @@ void sr_handlepacket(struct sr_instance *sr,
 			/* routing table hit */
 			if (rtentry != NULL)
 			{
-			/**************** fill in code here *****************/
+				/**************** fill in code here *****************/
 				/* check TTL expiration */
 				/* if TTL expired, { */
-					/* validation */
-				
-				
+				/* validation */
 
-					/* generate ICMP time exceeded packet */
-				
-				
-				
-					/* send */
+				/* generate ICMP time exceeded packet */
 
+				/* send */
 
-								
-					/* queue */
+				/* queue */
 
-
-
-					/* done */
-
+				/* done */
 
 				/* } */
 				/* TTL not expired */
 				/* set src MAC addr */
 
-
-
 				/* refer ARP table */
 
-
-
-				/* hit */	
+				/* hit */
 				if (arpentry != NULL)
 				{
 					/* set dst MAC addr */
 
-
-
 					/* decrement TTL  */
 
-
-
 					/* forward */
-
-
 				}
 				/* ARP table miss */
-				else {
+				else
+				{
 					/* queue */
 					arpreq = sr_arpcache_queuereq(&(sr->cache), rtentry->gw.s_addr, packet, len, rtentry->interface);
 					sr_arpcache_handle_arpreq(sr, arpreq);
 				}
 				/* done */
 				return;
-			/*****************************************************/
+				/*****************************************************/
 			}
 			/* routing table miss */
 			else
 			{
-			/**************** fill in code here *****************/
+				/**************** fill in code here *****************/
 
-				/* validation */	
-				
-
+				/* validation */
 
 				/* generate ICMP net unreachable packet */
 
-
-
 				/* send */
-
-
 
 				/* queue */
 
-
-			
 				/* done */
 
-
-
-			/*****************************************************/
+				/*****************************************************/
 			}
 		}
 	}
@@ -366,56 +344,37 @@ void sr_handlepacket(struct sr_instance *sr,
 			/* request code */
 			if (a_hdr0->ar_op == htons(arp_op_request))
 			{
-			/**************** fill in code here *****************/
-				
+				/**************** fill in code here *****************/
+
 				/* generate reply */
-
-
 
 				/* send */
 
-
-				
 				/* done */
 
-
-
-			/*****************************************************/
+				/*****************************************************/
 			}
 
 			/* reply code */
 			else if (a_hdr0->ar_op == htons(arp_op_reply))
 			{
-			/**************** fill in code here *****************/
+				/**************** fill in code here *****************/
 
 				/* pass info to ARP cache */
 
-				
-
 				/* pending request exist */
-
-
 
 				/* set dst MAC addr */
 
-
-
 				/* decrement TTL except for self-generated packets */
-
-
 
 				/* send */
 
-
-
 				/* done */
 
-
-
-			/*****************************************************/
+				/*****************************************************/
 				/* no exist */
-				else
-					return;
+				else return;
 			}
 
 			/* other codes */
