@@ -261,7 +261,7 @@ void sr_handlepacket(struct sr_instance *sr,
 				e_hdr = (struct sr_ethernet_hdr *)new_pck;
 				e_hdr->ether_type = htons(ethertype_ip);
 
-				fprintf(stderr, "%d\n", sizeof(struct sr_ip_hdr));
+				fprintf(stderr, "%ld\n", sizeof(struct sr_ip_hdr));
 				/* set ip header */
 				i_hdr = (struct sr_ip_hdr *)(new_pck + sizeof(struct sr_ethernet_hdr));
 				i_hdr->ip_v = 0x4;
